@@ -1,0 +1,31 @@
+create table account (
+account_number int not null, 
+branch_name char(15), 
+primary key(account_number)
+);
+
+drop table account;
+
+explain account;
+
+describe account;
+
+desc account;
+
+insert into account values(9732, 'Perryridge');
+
+delete from account where branch_name = 'Perryridge';
+
+select * from account;
+
+select customer_name, borrower.loan_number, amount 
+from borrower, loan 
+where borrower.loan_number = loan.loan_number and branch_name = 'Perryridge';
+
+show tables;
+
+update student set id = 5 where name="susan";
+
+exit;
+
+insert into account values(9732, 'Perryridge'); show tables; insert into account; desc account;
