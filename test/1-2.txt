@@ -1,0 +1,177 @@
+create table account (
+account_number int not null, 
+branch_name char(15), 
+primary key(account_number)
+);
+
+drop table account;
+
+explain account;
+
+describe account;
+
+desc account;
+
+insert into account values(9732, 'Perryridge');
+
+delete from account where branch_name = 'Perryridge';
+
+select * from account;
+
+select customer_name, borrower.loan_number, amount 
+from borrower, loan 
+where borrower.loan_number = loan.loan_number and branch_name = 'Perryridge';
+
+show tables;
+
+update student set id = 5 where name="susan";
+
+exit;
+
+insert into account values(9732, 'Perryridge'); show tables; insert into account; desc account;
+
+
+create table department(
+    dept_name char(20) not null,
+    building char(20),
+    budget int,
+    primary key(dept_name)
+);
+
+create table student(
+    ID char(5) not null,
+    name char(20) not null,
+    dept_name char(20) not null,
+    primary key(ID),
+    foreign key(dept_name) references department(dept_name)
+);
+insert into student values('2018-17119', 'Sue Hyun', 'Business');
+
+insert into depart values('Business', 'No. 301', 45);
+insert into department values('Business', 'No. 301', 45);
+
+create table advisor(
+    s_id char(5) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    s_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table advisor(
+    s_id char(0) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table advisor(
+    s_id char(0.1) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    primary key(s_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(id, i_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(id) references student(ID)
+);
+
+create table student(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references instructor(ID)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(tot_cred)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(dept_name)
+);
+
+create table instructor(
+    id int,
+    primary key(id)
+);
+
+create table advisor(
+    s_id char(10) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references instructor(id)
+);
+
+
+
+
+
+
+
+
+
+create table department(
+    dept_name char(20) not null,
+    building char(20),
+    budget int,
+    primary key(dept_name)
+);
+
+create table student(
+    ID char(5) not null,
+    name char(20) not null,
+    dept_name char(20) not null,
+    primary key(ID),
+    foreign key(dept_name) references department(dept_name)
+);
+
+create table advisor(
+    s_id char(5) not null,
+    i_id char(10) not null,
+    primary key(s_id, i_id),
+    foreign key(s_id) references student(ID)
+);
+
+create table adv(
+    a_id char(5) not null,
+    b_id char(10) not null,
+    foreign key(a_id, b_id) references advisor(s_id, i_id)
+);
