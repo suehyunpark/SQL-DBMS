@@ -50,8 +50,12 @@ OR : "or"i
 AND : "and"i
 NOT : "not"i
 NULL : "null"i
-COMP_OP : "<" | ">" | ">=" | "<=" | "!="
-ASSIGNMENT: "="  // the equal sign is used in both where clause and assignment in update query
+LESSTHAN : "<"
+LESSEQUAL : "<="
+GREATERTHAN: ">"
+GREATEREQUAL : ">="
+EQUAL: "="
+NOTEQUAL: "!="
 
 SHOW : "show"i
 
@@ -110,7 +114,7 @@ desc_query : DESC table_name
 // INSERT
 insert_query : INSERT INTO table_name [column_name_list] VALUES value_list
 value_list : LP value ("," value)* RP
-value : INT | STR | DATE
+value : INT | STR | DATE | NULL
 
 // DELETE
 delete_query : DELETE FROM table_name [where_clause]
@@ -133,7 +137,8 @@ boolean_test : predicate
 parenthesized_boolean_expr : LP boolean_expr RP
 predicate : comparison_predicate
           | null_predicate
-comparison_predicate : comp_operand (COMP_OP | ASSIGNMENT) comp_operand
+comparison_predicate : comp_operand comp_op comp_operand
+comp_op: LESSTHAN | LESSEQUAL | EQUAL | GREATERTHAN | GREATEREQUAL | NOTEQUAL
 comp_operand : comparable_value
              | [table_name "."] column_name
 comparable_value : INT | STR | DATE
@@ -145,4 +150,4 @@ show_tables_query : SHOW TABLES
 
 // UPDATE
 update_query : UPDATE table_name SET assignment [where_clause]
-assignment : column_name ASSIGNMENT value
+assignment : column_name EQUAL value

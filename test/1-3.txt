@@ -1,0 +1,85 @@
+create table students ( id char (10) not null, name char (20), primary key (id)
+);
+
+create table lectures ( id int not null,
+name char (20), capacity int,
+primary key (id) );
+
+create table ref (
+id int,
+foreign key (id) references lectures (id)
+);
+
+create table apply (
+s_id char (10) not null,
+l_id int not null,
+apply_date date,
+primary key (s_id, l_id),
+foreign key (s_id) references students (id), foreign key (l_id) references lectures (id)
+);
+
+
+** NoSuchTable
+insert into studentss values('2018-17119', 'Sue');
+
+** InsertTypeMismatchError
+insert into students(id) values('2018-17119', 'Sue');
+insert into students(id, name) values('2018-17119');
+insert into students(id, name) values(2018, 'Sue');
+insert into students(id, name) values('2018-17119', 45);
+
+**InsertColumnNonNullableError
+insert into students(id, name) values(null, 'Sue');
+
+** InsertColumnExistenceError
+insert into students(id, namee) values('2018-17119', 'Sue');
+
+! Valid
+insert into students(id, name) values('2018-17119', 'Sue');
+insert into students(id, name) values('shpark', 'Sue');
+insert into students values('shpark2', 'Sue');
+insert into lectures(id, name, capacity) values(10, 'DB', 100);
+insert into ref(id) values(10);
+
+** InsertDuplicatePrimaryKeyError
+insert into students values('shpark2', 'Sue');
+insert into lectures(id, name, capacity) values(10, 'DB', 100);
+insert into ref(id) values(10);
+
+** InsertReferentialIntegrityError
+insert into ref(id) values(3);
+
+
+select customer_name, borrower.loan_number, amount 
+from borrower, loan 
+where borrower.loan_number = loan.loan_number and branch_name = 'Perryridge';
+
+
+select * from students;
+select * from students, lectures;
+select * from apply, students, lectures;
++------+------+------------+
+| S_ID | L_ID | APPLY_DATE |
++------+------+------------+
++------+------+------------+
+
++------+------+------------+-------------+---------------+-------------+---------------+----------+
+| S_ID | L_ID | APPLY_DATE | STUDENTS.ID | STUDENTS.NAME | LECTURES.ID | LECTURES.NAME | CAPACITY |
++------+------+------------+-------------+---------------+-------------+---------------+----------+
++------+------+------------+-------------+---------------+-------------+---------------+----------+
+select students.name, capacity from students, lectures;
+select lectures.capacity from students, lectures;
+
+** SelectColumnResolveError
+select ID from students, lectures;  same column
+select year from students; no column
+
+
+select * from students where name = 'Sue' and id = '2018-17119';
+select * from students where name = 'Sue';
+select * from students where students.name = 'Sue';
+select capacity, students.id from students, lectures where capacity > 80;
+select capacity, students.id from students, lectures where capacity > 80 or lectures.id = 10;
+
+
+need to test delete

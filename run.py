@@ -1,6 +1,6 @@
 from lark import Lark
 
-from data_model import DBMS
+from dbms import DBMS
 from messages import *
 from sql_transformer import SQLTransformer
 
@@ -18,10 +18,10 @@ def main():
         for query in query_list:
             try:
                 sql_transformer = SQLTransformer()
-                statement, table, record = parse_query(sql_parser, sql_transformer, query)
+                statement, table, record, tables, select_columns, where = parse_query(sql_parser, sql_transformer, query)
+                print(tables, select_columns, where)
                 if statement == 'exit':
                     exit = True  # end program only when exit query is entered
-                    # dbms.delete_all()
                     break
                 if statement == "create table":
                     success = dbms.create_table(table)
@@ -36,16 +36,23 @@ def main():
                     output = dbms.show_tables()
                     print(PROMPT + output)
                 elif statement == "insert":
-                    result = dbms.insert(table["table_name"], record)
+                    result = dbms.insert(table, record)
                     print(PROMPT + str(result))
+                elif statement == "delete":
+                    result, extra = dbms.delete(table["table_name"], where)
+                    print(PROMPT + str(result))
+                    if extra:
+                        print(PROMPT + str(extra))
                 elif statement == "select":
-                    output = dbms.select(table["table_name"])
+                    output = dbms.select(tables, select_columns, where)
                     print(PROMPT + output)
-            except (SyntaxError, DuplicateColumnDefError, DuplicatePrimaryKeyDefError, 
-                    ReferenceTypeError, ReferenceNonPrimaryKeyError, ReferenceColumnExistenceError, 
-                    ReferenceTableExistenceError, NonExistingColumnDefError, TableExistenceError,
-                    CharLengthError, NoSuchTable, DropReferencedTableError,
-                    SelectTableExistenceError) as e:
+            except (SyntaxError, NoSuchTable, DuplicateColumnDefError, DuplicatePrimaryKeyDefError, 
+                    ReferenceTypeError, ReferenceNonPrimaryKeyError, ReferenceColumnExistenceError, ReferenceTableExistenceError, 
+                    NonExistingColumnDefError, TableExistenceError, CharLengthError, DropReferencedTableError, 
+                    InsertTypeMismatchError, InsertColumnExistenceError, InsertColumnNonNullableError,
+                    InsertDuplicatePrimaryKeyError, InsertReferentialIntegrityError,
+                    SelectTableExistenceError, SelectColumnResolveError, 
+                    WhereIncomparableError, WhereTableNotSpecified, WhereColumnNotExist, WhereAmbiguousReference) as e:
                 print(PROMPT + str(e))
                 break
             
