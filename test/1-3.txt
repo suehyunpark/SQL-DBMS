@@ -83,3 +83,8 @@ select capacity, students.id from students, lectures where capacity > 80 or lect
 
 
 need to test delete
+
+
+select customer_name, borrower.loan_number, amount
+from borrower, loan
+where borrower.loan_number = loan.loan_number and branch_name = 'Perryridge';

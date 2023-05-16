@@ -1,3 +1,4 @@
+from collections import defaultdict
 import pickle  # handle complex data types and tuples as dict keys
 from typing import Dict, Set, Tuple
 from pathlib import Path
@@ -61,17 +62,6 @@ class Table(DataObject):
     def check_reference_type(self, referencing_type: str, referenced_key: str):
         return self.columns[referenced_key] == referencing_type
     
-    # def check_reference_primary_key(self, referenced_keys: Tuple[str]):
-    #     if not self.primary_key:
-    #         return False
-    #     return referenced_keys == self.primary_key  # need to compare in case insensitive way
-    
-    # def check_reference_type(self, referencing_types: Tuple[str]):
-    #     if not self.primary_key:
-    #         return False
-    #     primary_key_types = tuple([self.columns[key] for key in self.primary_key])
-    #     return all([referencing_type == referenced_type for referencing_type, referenced_type in zip(referencing_types, primary_key_types)])
-    
     def has_reference(self):
         return self.referenced_by is not None and len(self.referenced_by) > 0
     
@@ -108,19 +98,24 @@ class Record(DataObject):
     def __init__(
         self, 
         table_name: str, 
-        data: Dict[str, str], 
-        primary_value: Tuple[str],
-        is_referencing: bool,
-        is_referenced: bool=False
+        data: Dict, 
+        primary_value: Tuple,
+        referencing: Dict[Tuple, Set],
+        referenced_by=defaultdict(set)
     ):
         self.table_name = table_name
         self.data = data
         self.primary_value = primary_value
-        self.is_referencing = is_referencing
-        self.is_referenced = is_referenced
-    
-    def add_reference(self):
-        self.is_referenced = True
+        self.referencing = referencing  # {(referenced table_name, referenced column): {referenced value...}} 
+        self.referenced_by = referenced_by  # {(referencing table_name, referencing column): {referencing value...}}
+
+    def add_to_referenced_by(self, referencing_table, referencing_column, referencing_value):
+        self.referenced_by[(referencing_table, referencing_column)].add(referencing_value)
+        
+    def remove_referenced_by(self, referencing_table, referencing_column, referencing_value):
+        self.referenced_by[(referencing_table, referencing_column)].remove(referencing_value)
+        if len(self.referenced_by[(referencing_table, referencing_column)]) == 0:
+            del self.referenced_by[(referencing_table, referencing_column)]
         
         
         

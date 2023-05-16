@@ -19,7 +19,6 @@ def main():
             try:
                 sql_transformer = SQLTransformer()
                 statement, table, record, tables, select_columns, where = parse_query(sql_parser, sql_transformer, query)
-                print(tables, select_columns, where)
                 if statement == 'exit':
                     exit = True  # end program only when exit query is entered
                     break

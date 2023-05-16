@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import itertools
 from collections import Counter
 from copy import deepcopy
@@ -91,7 +91,6 @@ class DBMS:
         table_db.close_db()
         
         return CreateTableSuccess(table_name)
-
     
     
     def drop_table(self, table_name: str):
@@ -166,21 +165,20 @@ class DBMS:
             if value is None and column_name in table.not_null_keys:
                 raise InsertColumnNonNullableError(column_name)
         
-        if not all([self._validate_type(data_type, value) for data_type, value in zip(table.columns.values(), value_list)]):
+        if not all([is_valid_type(data_type, value) for data_type, value in zip(table.columns.values(), value_list)]):
             raise InsertTypeMismatchError()
         
-
         data = {}
         primary_value = []
-        is_referencing = False
+        referencing = dict()
         for (column_name, data_type), value in zip(table.columns.items(), value_list):
-            if data_type.startswith("char"):
+            if data_type.startswith("char") and value is not None:
                 max_len = eval_char_max_len(data_type)
                 value = value[:max_len]
             if table.primary_key and column_name in table.primary_key:  # may be composite primary key
                 primary_value.append(value)
             if table.foreign_keys and column_name in table.foreign_keys:  # one foreign key per column
-                referenced_table_name, _ = table.foreign_keys[column_name]
+                referenced_table_name, referenced_column_name = table.foreign_keys[column_name]
                 # get referenced table schema
                 self.meta_db.open_db()
                 referenced_table_key = self.meta_db.create_key_from_value(referenced_table_name)
@@ -201,13 +199,15 @@ class DBMS:
                             break
                 if referenced_record is None:
                     raise InsertReferentialIntegrityError()
-                is_referencing = True
-                referenced_record.add_reference()  # update reference
+                referencing[(referenced_table_name, referenced_column_name)] = {referenced_record.data[referenced_column_name]}
+                assert referenced_record.data[referenced_column_name] == value
+                referenced_record.add_to_referenced_by(table_name, column_name, value)
                 referenced_table_db.put(referenced_key, referenced_record)
                 referenced_table_db.close_db()
             data[column_name] = value
         primary_value = tuple(primary_value) if primary_value else None
-        record = Record(table_name, data, primary_value, is_referencing)
+        record = Record(table_name, data, primary_value, referencing)
+        print("Record is referencing", referencing)
         
         table_db = DB(table_name)
         table_db.open_db()
@@ -220,7 +220,6 @@ class DBMS:
         return InsertResult()
 
     
-    
     def delete(self, table_name: str, where_clause: str):
         self.meta_db.open_db()
         table_key = self.meta_db.create_key_from_value(table_name)
@@ -231,24 +230,45 @@ class DBMS:
         
         table_db = DB(table_name)
         table_db.open_db()
-        cursor = table_db.create_cursor()
+        outer_cursor = table_db.create_cursor()
         
         success_cnt = 0
         fail_cnt = 0
-        key_value_pair = cursor.first()
+        key_value_pair = outer_cursor.first()
         while key_value_pair:
             key, value = key_value_pair
-            record = Record.deserialize(value).data
-            satisfies = self._evaluate_condition(where_clause, [table], record) if where_clause else True
-            if satisfies == True:  # not UNKNOWN
-                if record.is_referenced:
+            record = Record.deserialize(value)
+            satisfies = self._evaluate_condition(deepcopy(where_clause), [table], record.data) if where_clause else True
+            if satisfies == True:
+                if list(record.referenced_by.values()):
                     fail_cnt += 1
+                    print("Record is being referenced by", record.referenced_by)
                 else:
-                    table_db.delete_by_cursor(cursor)
+                    if record.referencing:
+                        for (referenced_table_name, referenced_column_name), referenced_value_set in record.referencing.items():
+                            for referenced_value in referenced_value_set:
+                                referenced_table_db = DB(referenced_table_name)
+                                referenced_table_db.open_db()
+                                inner_cursor = referenced_table_db.create_cursor()
+                                key_value_pair = inner_cursor.first()
+                                while key_value_pair:
+                                    key, value = key_value_pair
+                                    referenced_record = Record.deserialize(value)
+                                    for column in table.columns:
+                                        if ((table_name, column) in referenced_record.referenced_by and 
+                                            referenced_value in referenced_record.referenced_by[(table_name, column)]):
+                                            referenced_record.remove_referenced_by(table_name, column, referenced_value)
+                                            referenced_table_db.put(key, referenced_record)  # update reference
+                                            print(f"Reference removed from '{referenced_table_name}': table '{table_name}', column '{column}', value '{referenced_value}'")
+                                    key_value_pair = inner_cursor.next()
+                                referenced_table_db.discard_cursor(inner_cursor)
+                                referenced_table_db.close_db()
+                    table_db.delete_by_cursor(outer_cursor)
+                    print("Record deleted", record.data)
                     success_cnt += 1
-            key_value_pair = cursor.next()
+            key_value_pair = outer_cursor.next()
             
-        table_db.discard_cursor(cursor)
+        table_db.discard_cursor(outer_cursor)
         table_db.close_db()
         
         return DeleteResult(success_cnt), DeleteReferentialIntegrityPassed(fail_cnt) if fail_cnt else None
@@ -275,18 +295,21 @@ class DBMS:
                 if prefixed_column_name in record:
                     return record[prefixed_column_name]
             return record[column_name]
+        
+        def determine_operand_value(operand):
+            if operand is None:
+                value = operand
+            elif len(operand) == 1:  # comparable_value
+                value = operand[0]
+            else:  # table_name, column_name
+                value = get_record_value(operand)
+            return value
             
         op = condition["op"]
         if op in comparison_op_map | null_op_map:
             op, left_operand, right_operand = map(condition.get, ["op", "left_operand", "right_operand"])
-            if len(left_operand) == 1:  # comparable_value
-                left_value = left_operand[0]
-            else:  # table_name, column_name
-                left_value = get_record_value(left_operand)
-            if len(right_operand) == 1:
-                right_value = right_operand[0]
-            else:
-                right_value = get_record_value(right_operand)
+            left_value = determine_operand_value(left_operand)
+            right_value = determine_operand_value(right_operand)
             
             if op in comparison_op_map and is_comparable(left_value, right_value) == False:
                 raise WhereIncomparableError()
@@ -329,28 +352,28 @@ class DBMS:
             table_list.append(table)
         self.meta_db.close_db()
         
+        final_columns = []
         if select_columns:
             for table_name, column_name in select_columns:
                 found_tables = [table for table in table_list if column_name in table]
-                if len(found_tables) != 1 and not table_name:  # column name is ambiguous
+                if len(found_tables) < 1:
                     raise SelectColumnResolveError(column_name)
-                found_table = found_tables[0]
+                elif len(found_tables) > 1:
+                    if not table_name:
+                        raise SelectColumnResolveError(column_name)
+                    found_table = next(table for table in found_tables if table_name == table.table_name)
+                else:
+                    found_table = found_tables[0]       
                 if table_name and table_name != found_table.table_name:
                     raise SelectColumnResolveError(column_name)
+                final_column = f"{found_table.table_name}.{column_name}" if table_name else column_name
+                final_columns.append(final_column)
         
         all_columns = []
         for table_schema in table_list:
             all_columns.extend(list(table_schema.columns.keys()))
         counter = Counter(all_columns)
         common_columns = set([column for column, count in counter.items() if count > 1])
-        
-        final_columns = []
-        for table_schema in table_list:
-            for column in table_schema.columns:
-                if column in common_columns:
-                    final_columns.append(f"{table_schema.table_name}.{column}")
-                else:
-                    final_columns.append(column)
                     
         all_records_with_table = {}
         for table_name in tables:
@@ -394,14 +417,22 @@ class DBMS:
                     value = None
                     if table_name:
                         prefixed_column_name = f"{table_name}.{column_name}"
-                        value = record.get(prefixed_column_name, None)  # table name prefix may not be necessary
-                    if value:
-                        final_record[prefixed_column_name] = value
+                        try:
+                            final_record[prefixed_column_name] = record[prefixed_column_name]
+                        except KeyError:
+                            final_record[prefixed_column_name] = record[column_name]
                     else:
                         final_record[column_name] = record[column_name]
                 final_records.append(final_record)
         else:
             final_records = filtered_records
+            final_columns = []
+            for table_schema in table_list:
+                for column in table_schema.columns:
+                    if column in common_columns:
+                        final_columns.append(f"{table_schema.table_name}.{column}")
+                    else:
+                        final_columns.append(column)
             
         headers = final_records[0].keys() if final_records else final_columns
         

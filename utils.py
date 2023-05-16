@@ -1,6 +1,9 @@
 import operator
 import re
 
+
+# ------------------------------- Unknown class ------------------------------ #
+
 class Unknown:
     def __repr__(self):
         return "UNKNOWN"
@@ -8,15 +11,20 @@ class Unknown:
 UNKNOWN = Unknown()
 
 
-def or_(x, y):
-    if isinstance(x, Unknown) or isinstance(y, Unknown):
-        return UNKNOWN if not (x is True or y is True) else True
-    return x or y
 
-def and_(x, y):
-    if isinstance(x, Unknown) or isinstance(y, Unknown):
-        return UNKNOWN if not (x is False or y is False) else False
-    return x and y
+# --------------------------------- operators -------------------------------- #
+
+def or_(*args):
+    for arg in args:
+        if isinstance(arg, Unknown):
+            return UNKNOWN if not any(arg is True for arg in args) else True
+    return any(args)
+
+def and_(*args):
+    for arg in args:
+        if isinstance(arg, Unknown):
+            return UNKNOWN if any(arg is False for arg in args) else False
+    return all(args)
 
 def not_(x):
     if isinstance(x, Unknown):
@@ -39,6 +47,8 @@ null_op_map = {
 }
 
 
+# --------------------------------- data type -------------------------------- #
+
 DATE_PATTERN = r"(\d{4})-(\d{2})-(\d{2})"
 
 def eval_char_max_len(data_type):
@@ -57,7 +67,6 @@ def is_valid_type(valid_type, value):
             return re.match(DATE_PATTERN, value)
     except ValueError:
         return False
-    
 
 def is_comparable(a, b):
     def infer_type(value):
