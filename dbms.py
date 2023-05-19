@@ -207,7 +207,6 @@ class DBMS:
             data[column_name] = value
         primary_value = tuple(primary_value) if primary_value else None
         record = Record(table_name, data, primary_value, referencing)
-        print("Record is referencing", referencing)
         
         table_db = DB(table_name)
         table_db.open_db()
@@ -242,7 +241,6 @@ class DBMS:
             if satisfies == True:
                 if list(record.referenced_by.values()):
                     fail_cnt += 1
-                    print("Record is being referenced by", record.referenced_by)
                 else:
                     if record.referencing:
                         for (referenced_table_name, referenced_column_name), referenced_value_set in record.referencing.items():
@@ -259,12 +257,10 @@ class DBMS:
                                             referenced_value in referenced_record.referenced_by[(table_name, column)]):
                                             referenced_record.remove_referenced_by(table_name, column, referenced_value)
                                             referenced_table_db.put(key, referenced_record)  # update reference
-                                            print(f"Reference removed from '{referenced_table_name}': table '{table_name}', column '{column}', value '{referenced_value}'")
                                     key_value_pair = inner_cursor.next()
                                 referenced_table_db.discard_cursor(inner_cursor)
                                 referenced_table_db.close_db()
                     table_db.delete_by_cursor(outer_cursor)
-                    print("Record deleted", record.data)
                     success_cnt += 1
             key_value_pair = outer_cursor.next()
             

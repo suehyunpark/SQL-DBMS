@@ -29,6 +29,7 @@ insert into students (id, name) values('S006', 'Sophia Garcia');
 insert into students values('S007', 'Sue Park');
 insert into students values('S008', null);
 insert into students values('S009', 'Sean Park');
+insert into students values('S0010', null);
 
 -- Insert into lectures
 insert into lectures (id, name, capacity) values(1, 'Maths 101', 30);
