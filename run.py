@@ -4,7 +4,7 @@ from dbms import DBMS
 from messages import *
 from sql_transformer import SQLTransformer
 
-PROMPT = "DB_2018-17119> "
+PROMPT = "DB_2023-12345> "  # personal information
 
 dbms = DBMS()
 
